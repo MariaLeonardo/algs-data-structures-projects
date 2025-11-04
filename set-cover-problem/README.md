@@ -1,56 +1,73 @@
-# 🚴 Directed Feedback Vertex Set (DFVS) Solver
+# ♟️ Minimum Set Cover Solver (Meeting Coverage)
 
-This repository contains a C++ implementation designed to solve a specific instance of the **Directed Feedback Vertex Set (DFVS) Problem**.
+This C++ program solves the **Minimum Set Cover Problem**, framed as finding the minimum number of members required to collectively cover all scheduled meetings.
 
-The goal is to find a single vertex (node) in a directed graph whose removal is sufficient to make the entire graph acyclic (a Directed Acyclic Graph or DAG).
+Since the Minimum Set Cover Problem is **NP-hard**, the solution employs a hybrid approach: an exact method for small inputs and a highly effective approximation/heuristic strategy for large inputs.
 
 ---
 
 ## 💡 Problem Description
 
-The **Directed Feedback Vertex Set (DFVS)** problem asks for the minimum set of vertices whose deletion breaks every directed cycle in a graph.
+Given a set of **Meetings** (the Universe) and a collection of **Members** (each representing a set of meetings they attend), the goal is to find the **smallest possible subset of Members** such that every Meeting is attended by at least one selected Member.
 
-This implementation solves the $\mathbf{k=1}$ version of this problem: we search for a *single* vertex whose removal guarantees an acyclic graph.
-
-### Technical Details
-
-* **Input:** A directed graph $G=(V, E)$.
-* **Goal:** Find $v \in V$ such that $G \setminus \{v\}$ contains no cycles.
-* **Method:** The solution employs a trial-and-error approach, where it iterates through every vertex, temporarily "excluding" it, and running a **Depth First Search (DFS)** cycle detection on the remaining graph.
+* **Universe (Meetings):** `riunioni`
+* **Sets (Members):** `tuttiMembri`
 
 ---
 
-## ⚙️ How It Works
+## 🧠 Algorithmic Strategy
 
-The core logic is handled by two main components:
+The code dynamically selects an algorithm based on the problem size ($N$).
 
-1.  **`struct nodo` / `typedef vector<nodo> grafo`**: Defines the graph structure using an adjacency list.
-2.  **`bool grafo_ciclico(...)`**: This recursive function performs the cycle detection using DFS. It utilizes two boolean arrays to track the state of vertices:
-    * `visited`: True if the vertex has been reached.
-    * `in_stack`: True if the vertex is currently in the recursion stack (indicating the presence of a back edge, which signals a cycle).
-3.  **`main()`**: The main loop iterates through every vertex as the potential one to exclude.
-    * If excluding a vertex results in an acyclic graph, the solution is found.
-    * If a cycle is still present, the path of that cycle is recorded.
+### 1. Small Instance (Optimal Solution)
 
-### Data Structures Used
+If the total number of distinct members ($N$) is less than or equal to **15**, the code guarantees the absolutely optimal solution:
 
-* `std::vector<nodo>`: Adjacency list representation of the graph.
-* `std::vector<bool>` (`visited`, `in_stack`): Used for efficient cycle detection during DFS.
-* `std::vector<int>` (`path`): Records the current path during DFS to reconstruct the cycle when found.
+* **Method:** **Brute-Force Combinations (Iterative Exhaustive Search)**.
+* **Process:** It iterates through all possible subset sizes $k = 1, 2, 3, \ldots$ and, for each size, it checks every combination of $k$ members using `std::next_permutation` on a boolean mask.
+* **Guarantees:** The **Minimum Set Cover** is found because all possibilities are checked in increasing order of size.
+
+### 2. Large Instance (Approximation & Heuristics)
+
+For larger problems where the exhaustive search is too slow, the code uses a powerful approximation strategy:
+
+* **Phase A: Greedy Approximation**
+    * It iteratively selects the Member who covers the **maximum number of currently uncovered Meetings**. This is a classic greedy strategy known to provide an approximation solution (within a logarithmic factor of the optimum).
+    * It uses a **Max-Heap (`std::priority_queue`)** with a **Lazy Update** mechanism to efficiently find the best unselected member in $O(\log N)$ time per step.
+
+* **Phase B: Randomized Local Search (Optimization)**
+    * After the greedy solution is found, the code attempts to refine and potentially reduce its size using a simple local search heuristic.
+    * It repeatedly attempts to **randomly remove** a member or **randomly swap** a selected member with an unselected one, checking if the resulting set still covers all meetings and is smaller than the current best solution.
 
 ---
 
-## 📂 Input/Output Format
+## ⚙️ Input/Output Format
 
-The program reads from `input.txt` and writes the result to `output.txt`.
+The program reads problem data from `input.txt` and writes the resulting minimum set to `output.txt`.
 
-### Input (`input.txt`)
+### Input Format (`input.txt`)
 
 The first line contains two integers:
-1.  **N**: The number of vertices (nodes), indexed from $0$ to $N-1$.
-2.  **M**: The number of directed edges.
+1.  **N**: The total number of distinct members (Nodes/People).
+2.  **M**: The total number of meetings to be covered.
 
-The next $M$ lines each contain two integers representing a directed edge:
-* `from` `to`
+The next $M$ lines define the meetings:
+* The first number on the line is **C** (the count of members attending that meeting).
+* This is followed by $\mathbf{C}$ space-separated Member IDs.
 
-**Example Input:**
+| Example `input.txt` | Description |
+| :--- | :--- |
+| `10 3` | 10 Members, 3 Meetings. |
+| `2 5 8` | Meeting 1 is attended by Members 5 and 8. |
+| `3 1 5 9` | Meeting 2 is attended by Members 1, 5, and 9. |
+| `1 7` | Meeting 3 is attended by Member 7. |
+
+### Output Format (`output.txt`)
+
+The output contains one line with the result:
+
+1.  The **minimum number of members** required to cover all meetings.
+2.  The **IDs** of the selected members, sorted in ascending order.
+3.  A final `#` character.
+
+**Example Output (if Members 5, 7, and 9 are selected):**
